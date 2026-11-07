@@ -1,0 +1,8 @@
+flask
+pillow
+opencv-python
+torch
+torchvision
+numpy
+qrcode
+tinydb

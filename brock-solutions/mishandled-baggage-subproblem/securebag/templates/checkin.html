@@ -1,0 +1,172 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>SecureBag — Check In</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; font-family: system-ui, sans-serif; }
+    body { background: #0f172a; min-height: 100vh; padding: 1.5rem; color: white; }
+    .container { max-width: 600px; margin: 0 auto; }
+    .header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 1.5rem; padding-bottom: 1rem; border-bottom: 1px solid #1e293b; }
+    .header h1 { font-size: 1.2rem; font-weight: 600; }
+    .header p { font-size: 0.8rem; color: #64748b; }
+    .header-actions { display: flex; gap: 8px; align-items: center; }
+    .badge { background: #1e40af; color: #93c5fd; font-size: 0.7rem; padding: 2px 8px; border-radius: 20px; font-weight: 600; }
+    .btn-small { background: transparent; border: 1px solid #334155; color: #64748b; font-size: 0.7rem; padding: 2px 8px; border-radius: 20px; cursor: pointer; }
+    .btn-small:hover { color: white; border-color: #64748b; }
+    .btn-link { color: #64748b; font-size: 0.78rem; text-decoration: none; }
+    .btn-link:hover { color: white; }
+    .card { background: #1e293b; border-radius: 12px; padding: 1.25rem; margin-bottom: 1rem; border: 1px solid #334155; }
+    .card h2 { font-size: 0.8rem; font-weight: 600; margin-bottom: 1rem; color: #64748b; text-transform: uppercase; letter-spacing: 0.05em; }
+    .field { margin-bottom: 0.9rem; }
+    label { display: block; font-size: 0.78rem; color: #64748b; margin-bottom: 0.3rem; }
+    input { width: 100%; padding: 0.6rem 0.8rem; border: 1px solid #334155; border-radius: 8px; font-size: 0.95rem; background: #0f172a; color: white; }
+    input:focus { outline: none; border-color: #3b82f6; }
+    input::placeholder { color: #475569; }
+    .row { display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem; }
+    .upload-zone { border: 2px dashed #334155; border-radius: 8px; padding: 1.5rem; text-align: center; cursor: pointer; transition: border-color .2s; }
+    .upload-zone:hover { border-color: #3b82f6; }
+    .upload-zone p { color: #64748b; font-size: 0.85rem; margin-top: 0.4rem; }
+    #preview { width: 100%; border-radius: 8px; margin-top: 1rem; display: none; max-height: 200px; object-fit: cover; }
+    .btn { width: 100%; padding: 0.85rem; background: #2563eb; color: white; border: none; border-radius: 8px; font-size: 0.95rem; font-weight: 600; cursor: pointer; margin-top: 0.5rem; }
+    .btn:hover { background: #1d4ed8; }
+    .btn:disabled { background: #1e3a5f; color: #475569; cursor: not-allowed; }
+    .result { display: none; background: #0f2d1f; border: 1px solid #166534; border-radius: 12px; padding: 1.25rem; margin-top: 1rem; text-align: center; }
+    .result h3 { color: #4ade80; margin-bottom: 0.75rem; }
+    .qr { width: 160px; height: 160px; margin: 0 auto 0.75rem; display: block; border-radius: 8px; background: white; padding: 8px; }
+    .barcode { font-family: monospace; font-size: 0.8rem; background: #0f172a; padding: 0.5rem 1rem; border-radius: 6px; border: 1px solid #334155; margin-bottom: 0.75rem; word-break: break-all; color: #94a3b8; }
+    .tags { display: flex; flex-wrap: wrap; gap: 0.4rem; justify-content: center; }
+    .tag { background: #1e3a8a; color: #93c5fd; font-size: 0.78rem; padding: 0.2rem 0.6rem; border-radius: 20px; }
+    .loading { display: none; text-align: center; padding: 1rem; color: #64748b; }
+    .spinner { display: inline-block; width: 18px; height: 18px; border: 2px solid #334155; border-top-color: #3b82f6; border-radius: 50%; animation: spin .7s linear infinite; vertical-align: middle; margin-right: 0.5rem; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+  </style>
+</head>
+<body>
+<div class="container">
+  <div class="header">
+    <div>
+      <h1>✈ SecureBag</h1>
+      <p>Staff check-in terminal</p>
+    </div>
+    <div class="header-actions">
+      <span class="badge">STAFF ONLY</span>
+      <button class="btn-small" onclick="clearDB()">Clear DB</button>
+      <a class="btn-link" href="/bags">All bags →</a>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2>Passenger</h2>
+    <div class="field"><label>Full name</label><input id="name" placeholder="As on ticket"></div>
+    <div class="field"><label>Passport / ID number</label><input id="passport" placeholder="e.g. GB123456789"></div>
+  </div>
+
+  <div class="card">
+    <h2>Flight</h2>
+    <div class="row">
+      <div class="field"><label>Flight number</label><input id="flight" placeholder="e.g. BA291"></div>
+      <div class="field"><label>Destination</label><input id="dest" placeholder="e.g. Madrid"></div>
+    </div>
+    <div class="row">
+      <div class="field"><label>Gate</label><input id="gate" placeholder="e.g. B14"></div>
+      <div class="field"><label>Weight (kg)</label><input id="weight" type="number" placeholder="e.g. 23.4" step="0.1"></div>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2>Bag photo</h2>
+    <div class="upload-zone" onclick="document.getElementById('file').click()">
+      <div style="font-size:1.8rem">📷</div>
+      <p>Tap to photograph bag</p>
+    </div>
+    <input type="file" id="file" accept="image/*" capture="environment" style="display:none" onchange="previewImage(this)">
+    <img id="preview">
+  </div>
+
+  <button class="btn" onclick="checkin()">Register bag + generate QR</button>
+
+  <div class="loading" id="loading">
+    <span class="spinner"></span> Processing bag...
+  </div>
+
+  <div class="result" id="result">
+    <h3>✓ Bag registered</h3>
+    <p style="font-size:0.8rem;color:#4ade80;margin-bottom:0.75rem">Scan QR to verify at gate</p>
+    <img class="qr" id="qr-out" alt="QR Code">
+    <div class="barcode" id="barcode-out"></div>
+    <div class="tags" id="tags-out"></div>
+    <a id="verify-link" href="#" style="display:inline-block;margin-top:0.75rem;font-size:0.8rem;color:#64748b;">Open verify page →</a>
+  </div>
+</div>
+
+<script>
+function previewImage(input) {
+  const file = input.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = e => {
+    const img = document.getElementById('preview');
+    img.src = e.target.result;
+    img.style.display = 'block';
+  };
+  reader.readAsDataURL(file);
+}
+
+async function checkin() {
+  const name     = document.getElementById('name').value.trim();
+  const passport = document.getElementById('passport').value.trim();
+  const flight   = document.getElementById('flight').value.trim();
+  const dest     = document.getElementById('dest').value.trim();
+  const gate     = document.getElementById('gate').value.trim();
+  const weight   = document.getElementById('weight').value;
+  const file     = document.getElementById('file').files[0];
+
+  if (!name || !passport || !flight || !dest || !file) {
+    alert('Please fill in all fields and take a photo.');
+    return;
+  }
+
+  const formData = new FormData();
+  formData.append('name', name);
+  formData.append('passport', passport);
+  formData.append('flight', flight);
+  formData.append('destination', dest);
+  formData.append('gate', gate);
+  formData.append('weight', weight || 0);
+  formData.append('image', file);
+
+  document.querySelector('.btn').disabled = true;
+  document.getElementById('loading').style.display = 'block';
+  document.getElementById('result').style.display = 'none';
+
+  const resp = await fetch('/checkin', { method: 'POST', body: formData });
+  const data = await resp.json();
+
+  document.getElementById('loading').style.display = 'none';
+  document.querySelector('.btn').disabled = false;
+
+  if (data.error) { alert('Error: ' + data.error); return; }
+
+  document.getElementById('barcode-out').textContent = data.barcode_id;
+  document.getElementById('qr-out').src = '/qr/' + data.barcode_id;
+  document.getElementById('verify-link').href = '/bag/' + data.barcode_id;
+
+  const tags = document.getElementById('tags-out');
+  tags.innerHTML = '';
+  const tag = document.createElement('span');
+  tag.className = 'tag';
+  tag.textContent = data.colour_name;
+  tags.appendChild(tag);
+
+  document.getElementById('result').style.display = 'block';
+}
+
+async function clearDB() {
+  if (!confirm('Clear all bag records? This cannot be undone.')) return;
+  await fetch('/clear', { method: 'POST' });
+  alert('Database cleared.');
+}
+</script>
+</body>
+</html>

@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>SecureBag — All Bags</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <style>
+
+  /* This is css */
+    
+    * { box-sizing: border-box; margin: 0; padding: 0; font-family: system-ui, sans-serif; }
+    body { background: #0f172a; color: white; padding: 1.25rem; }
+    .container { max-width: 700px; margin: 0 auto; }
+    .header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 1.25rem; padding-bottom: 1rem; border-bottom: 1px solid #1e293b; }
+    .header h1 { font-size: 1.2rem; font-weight: 600; }
+    .header-actions { display: flex; gap: 10px; align-items: center; }
+    .btn-small { background: transparent; border: 1px solid #334155; color: #64748b; font-size: 0.75rem; padding: 4px 10px; border-radius: 6px; cursor: pointer; }
+    .btn-small:hover { color: white; border-color: #64748b; }
+    .btn-link { color: #64748b; font-size: 0.78rem; text-decoration: none; }
+    .btn-link:hover { color: white; }
+    .count { font-size: 0.8rem; color: #64748b; margin-bottom: 1rem; }
+    .empty { text-align: center; padding: 3rem; color: #334155; }
+    .empty p { font-size: 0.9rem; margin-top: 0.5rem; }
+    table { width: 100%; border-collapse: collapse; }
+    th { font-size: 0.72rem; color: #64748b; text-transform: uppercase; letter-spacing: 0.05em; padding: 0.5rem 0.75rem; text-align: left; border-bottom: 1px solid #1e293b; }
+    td { padding: 0.75rem; border-bottom: 1px solid #1e293b; font-size: 0.85rem; vertical-align: middle; }
+    tr:last-child td { border: none; }
+    tr:hover td { background: #1e293b; }
+    .thumb { width: 44px; height: 44px; object-fit: cover; border-radius: 6px; border: 1px solid #334155; }
+    .thumb-placeholder { width: 44px; height: 44px; background: #1e293b; border-radius: 6px; border: 1px solid #334155; display: flex; align-items: center; justify-content: center; font-size: 1.2rem; }
+    .status { font-size: 0.72rem; padding: 2px 8px; border-radius: 20px; font-weight: 600; display: inline-block; }
+    .status-active  { background: #14532d; color: #86efac; }
+    .status-flagged { background: #7f1d1d; color: #fca5a5; }
+    .tag { background: #1e3a8a; color: #93c5fd; font-size: 0.7rem; padding: 1px 6px; border-radius: 20px; display: inline-block; margin: 1px; }
+    .link { color: #3b82f6; text-decoration: none; font-size: 0.78rem; }
+    .link:hover { text-decoration: underline; }
+    .btn-resolve-sm { background: #1e3a8a; color: #93c5fd; border: 1px solid #3b82f6; font-size: 0.7rem; padding: 3px 8px; border-radius: 6px; cursor: pointer; margin-top: 5px; display: block; }
+    .btn-resolve-sm:hover { background: #2563eb; }
+  </style>
+</head>
+<body>
+<div class="container">
+  <div class="header">
+    <h1>✈ SecureBag — All Bags</h1>
+    <div class="header-actions">
+      <button class="btn-small" onclick="location.reload()">↻ Refresh</button>
+      <a class="btn-link" href="/">← Check in</a>
+    </div>
+  </div>
+
+  {% if not bags %} <!-- This is if statement is Django -->
+    <div class="empty">
+      <div style="font-size:2.5rem">🧳</div>
+      <p>No bags checked in yet.</p>
+    </div>
+  {% else %}
+    <p class="count">{{ bags|length }} bag{{ 's' if bags|length != 1 }} active</p>
+    <table>
+      <thead>
+        <tr>
+          <th>Photo</th>
+          <th>Passenger</th>
+          <th>Flight</th>
+          <th>Colour</th>
+          <th>Weight</th>
+          <th>Status</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for bag in bags %}
+        <tr>
+          <td>
+            {% if bag.image_b64 %}
+              <img class="thumb" src="data:image/jpeg;base64,{{ bag.image_b64 }}" alt="bag">
+            {% else %}
+              <div class="thumb-placeholder">🧳</div>
+            {% endif %}
+          </td>
+          <td>
+            <div style="font-weight:500;color:#e2e8f0">{{ bag.passenger_name }}</div>
+            <div style="font-size:0.75rem;color:#64748b">{{ bag.passport }}</div>
+          </td>
+          <td>
+            <div style="color:#e2e8f0">{{ bag.flight }}</div>
+            <div style="font-size:0.75rem;color:#64748b">→ {{ bag.destination }}</div>
+            {% if bag.gate %}<div style="font-size:0.75rem;color:#64748b">Gate {{ bag.gate }}</div>{% endif %}
+          </td>
+          <td><span class="tag">{{ bag.descriptors.colour_name }}</span></td>
+          <td style="color:#94a3b8">{{ bag.weight_kg }} kg</td>
+          <td>
+            {% if bag.status == 'flagged' %}
+              <span class="status status-flagged">⚠ Flagged</span>
+            {% else %}
+              <span class="status status-active">● Active</span>
+            {% endif %}
+          </td>
+          <td>
+            <a class="link" href="/bag/{{ bag.barcode_id }}">Verify →</a>
+            {% if bag.status == 'flagged' %}
+            <button class="btn-resolve-sm" onclick="resolveFlag('{{ bag.barcode_id }}')">Resolve flag</button>
+            {% endif %}
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  {% endif %}
+</div>
+<script>
+  // This is javascript
+async function resolveFlag(barcodeId) {
+  if (!confirm('Clear the flag on this bag and return it to active?')) return;
+  const resp = await fetch('/action/' + barcodeId, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ action: 'resolve' })
+  });
+  const data = await resp.json();
+  if (data.ok) location.reload();
+  else alert('Error: ' + (data.error || 'unknown'));
+}
+</script>
+</body>
+</html>

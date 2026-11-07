@@ -1,0 +1,5 @@
+{
+  "name": "dcs-uig",
+  "private": true,
+  "workspaces": ["apps/*"]
+}

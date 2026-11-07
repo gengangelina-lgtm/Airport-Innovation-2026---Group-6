@@ -1,0 +1,287 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>SecureBag — Verify</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; font-family: system-ui, sans-serif; }
+    body { background: #0f172a; color: white; padding: 1.25rem; }
+    .container { max-width: 480px; margin: 0 auto; }
+    .header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 1.25rem; }
+    .header h1 { font-size: 1.1rem; font-weight: 600; }
+    .header p { font-size: 0.78rem; color: #64748b; }
+    .header-actions { display: flex; gap: 8px; align-items: center; }
+    .badge { background: #1e40af; color: #93c5fd; font-size: 0.7rem; padding: 2px 8px; border-radius: 20px; font-weight: 600; }
+    .btn-link { color: #64748b; font-size: 0.78rem; text-decoration: none; }
+    .btn-link:hover { color: white; }
+    .status-badge { font-size: 0.75rem; padding: 3px 10px; border-radius: 20px; font-weight: 600; }
+    .status-ok   { background: #14532d; color: #86efac; }
+    .status-flag { background: #7f1d1d; color: #fca5a5; }
+    .card { background: #1e293b; border-radius: 12px; padding: 1.1rem; margin-bottom: 0.9rem; border: 1px solid #334155; }
+    .card h2 { font-size: 0.8rem; font-weight: 600; margin-bottom: 0.75rem; color: #64748b; text-transform: uppercase; letter-spacing: 0.05em; }
+    .bag-img { width: 100%; border-radius: 8px; margin-bottom: 0.75rem; max-height: 220px; object-fit: cover; }
+    .qr { width: 120px; height: 120px; background: white; padding: 6px; border-radius: 8px; display: block; margin: 0 auto 0.75rem; }
+    .tags { display: flex; flex-wrap: wrap; gap: 0.35rem; margin-bottom: 0.75rem; }
+    .tag { background: #1e3a8a; color: #93c5fd; font-size: 0.75rem; padding: 0.2rem 0.55rem; border-radius: 20px; }
+    .meta { font-size: 0.82rem; color: #64748b; line-height: 1.9; }
+    .meta span { color: #e2e8f0; font-weight: 500; }
+    .other-bag { display: flex; gap: 0.75rem; align-items: center; padding: 0.6rem 0; border-bottom: 1px solid #334155; }
+    .other-bag:last-child { border: none; }
+    .other-bag img { width: 52px; height: 52px; object-fit: cover; border-radius: 6px; border: 1px solid #334155; }
+    .other-bag-info { font-size: 0.8rem; }
+    .other-bag-info strong { display: block; color: #e2e8f0; }
+    .other-bag-info span { color: #64748b; font-size: 0.75rem; }
+    .upload-zone { border: 2px dashed #334155; border-radius: 8px; padding: 1.25rem; text-align: center; cursor: pointer; transition: border-color .2s; }
+    .upload-zone:hover { border-color: #3b82f6; }
+    .upload-zone p { color: #64748b; font-size: 0.85rem; margin-top: 0.35rem; }
+    #scan-preview { display: none; width: 100%; border-radius: 8px; margin-top: 0.75rem; max-height: 200px; object-fit: cover; }
+    .btn { width: 100%; padding: 0.85rem; background: #2563eb; color: white; border: none; border-radius: 8px; font-size: 0.95rem; font-weight: 600; cursor: pointer; margin-top: 0.75rem; }
+    .btn:hover { background: #1d4ed8; }
+    .btn:disabled { background: #1e3a5f; color: #475569; cursor: not-allowed; }
+    .loading { display: none; text-align: center; padding: 0.75rem; color: #64748b; font-size: 0.85rem; }
+    .spinner { display: inline-block; width: 16px; height: 16px; border: 2px solid #334155; border-top-color: #3b82f6; border-radius: 50%; animation: spin .7s linear infinite; vertical-align: middle; margin-right: 0.4rem; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .score-grid { margin-top: 0.75rem; }
+    .score-row { display: flex; justify-content: space-between; align-items: center; padding: 0.3rem 0; border-bottom: 1px solid rgba(255,255,255,0.08); font-size: 0.82rem; }
+    .score-row:last-child { border: none; }
+    .score-val { font-weight: 700; font-size: 0.9rem; }
+    .actions { display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem; margin-bottom: 0.75rem; }
+    .btn-confirm { padding: 0.85rem; background: #166534; color: #4ade80; border: 1px solid #22c55e; border-radius: 8px; font-size: 0.9rem; font-weight: 600; cursor: pointer; }
+    .btn-flag    { padding: 0.85rem; background: #7f1d1d; color: #fca5a5; border: 1px solid #ef4444; border-radius: 8px; font-size: 0.9rem; font-weight: 600; cursor: pointer; }
+    .btn-resolve { width: 100%; padding: 0.85rem; background: #1e3a8a; color: #93c5fd; border: 1px solid #3b82f6; border-radius: 8px; font-size: 0.9rem; font-weight: 600; cursor: pointer; margin-bottom: 0.75rem; }
+    .btn-collect { width: 100%; padding: 0.85rem; background: #1e293b; color: #64748b; border: 1px solid #334155; border-radius: 8px; font-size: 0.9rem; font-weight: 600; cursor: pointer; }
+    .alert-flag  { background: #450a0a; border: 1px solid #ef4444; color: #fca5a5; padding: 0.75rem 1rem; border-radius: 8px; font-size: 0.85rem; margin-bottom: 0.9rem; }
+    .done-screen { text-align: center; padding: 2rem 1rem; }
+    .done-screen .icon { font-size: 3rem; margin-bottom: 0.75rem; }
+    .done-screen h2 { font-size: 1.2rem; margin-bottom: 0.5rem; }
+    .done-screen p { color: #64748b; font-size: 0.85rem; }
+  </style>
+</head>
+<body>
+<div class="container">
+  <div class="header">
+    <div>
+      <h1>✈ SecureBag</h1>
+      <p>Bag verification</p>
+    </div>
+    <div class="header-actions">
+      {% if bag %}
+        <span id="status-badge" class="status-badge {{ 'status-flag' if bag.status == 'flagged' else 'status-ok' }}">
+          {{ '⚠ FLAGGED' if bag.status == 'flagged' else '● Active' }}
+        </span>
+      {% endif %}
+      <span class="badge">STAFF ONLY</span>
+      <a class="btn-link" href="/bags">All bags →</a>
+    </div>
+  </div>
+
+  {% if error %}
+    <div class="card"><p style="color:#f87171">{{ error }}</p></div>
+  {% else %}
+
+  <div id="flag-alert" class="alert-flag" style="{{ '' if bag.status == 'flagged' else 'display:none' }}">
+    ⚠ This bag has been flagged for inspection. Do not release.
+  </div>
+
+  <div class="card">
+    <h2>Check-in — {{ bag.barcode_id }}</h2>
+    {% if bag.image_b64 %}
+      <img class="bag-img" src="data:image/jpeg;base64,{{ bag.image_b64 }}" alt="Check-in photo">
+    {% endif %}
+    <img class="qr" src="/qr/{{ bag.barcode_id }}" alt="QR code">
+    <div class="tags">
+      <span class="tag">{{ bag.descriptors.colour_name }}</span>
+    </div>
+    <div class="meta">
+      Passenger: <span>{{ bag.passenger_name }}</span><br>
+      Passport:  <span>{{ bag.passport }}</span><br>
+      Flight:    <span>{{ bag.flight }} → {{ bag.destination }}</span><br>
+  {% if bag.gate %}Gate: <span>{{ bag.gate }}</span><br>{% endif %}
+      Weight:    <span>{{ bag.weight_kg }} kg</span>
+    </div>
+  </div>
+
+  {% if other_bags %}
+  <div class="card">
+    <h2>Other bags — same passport</h2>
+    {% for ob in other_bags %}
+    <div class="other-bag">
+      {% if ob.image_b64 %}
+        <img src="data:image/jpeg;base64,{{ ob.image_b64 }}" alt="bag">
+      {% endif %}
+      <div class="other-bag-info">
+        <strong>{{ ob.descriptors.colour_name }}</strong>
+        <span>{{ ob.barcode_id }}</span><br>
+        <span>{{ ob.weight_kg }} kg</span>
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+  {% endif %}
+
+  <!-- ── STEP 1: scan form ──────────────────────────────────────────── -->
+  <div id="scan-step">
+    <div class="card">
+      <h2>Scan this bag now</h2>
+      <div class="upload-zone" onclick="document.getElementById('scan-file').click()">
+        <div style="font-size:1.8rem">📷</div>
+        <p>Photograph the bag in front of you</p>
+      </div>
+      <input type="file" id="scan-file" accept="image/*"
+             style="display:none" onchange="previewScan(this)">
+      <img id="scan-preview">
+      <button class="btn" id="compare-btn" onclick="compareBags()">Compare bags →</button>
+      <div class="loading" id="scan-loading">
+        <span class="spinner"></span> Comparing bags...
+      </div>
+    </div>
+  </div>
+
+  <!-- ── STEP 2: result (populated by JS) ──────────────────────────── -->
+  <div id="result-step" style="display:none"></div>
+
+  <!-- always-visible controls -->
+  <button class="btn-collect" onclick="doAction('collect')">Collected at carousel →</button>
+
+  {% endif %}
+</div>
+
+<script>
+const BARCODE_ID       = '{{ bag.barcode_id if bag else "" }}';
+const ALREADY_FLAGGED  = {{ 'true' if bag and bag.status == 'flagged' else 'false' }};
+
+function previewScan(input) {
+  const file = input.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = e => {
+    const img = document.getElementById('scan-preview');
+    img.src = e.target.result;
+    img.style.display = 'block';
+  };
+  reader.readAsDataURL(file);
+}
+
+async function compareBags() {
+  const file = document.getElementById('scan-file').files[0];
+  if (!file) { alert('Please photograph or upload the bag first.'); return; }
+
+  document.getElementById('compare-btn').disabled = true;
+  document.getElementById('scan-loading').style.display = 'block';
+
+  const formData = new FormData();
+  formData.append('image', file);
+
+  try {
+    const resp = await fetch('/verify/' + BARCODE_ID, { method: 'POST', body: formData });
+    const data = await resp.json();
+    document.getElementById('scan-loading').style.display = 'none';
+
+    if (!data.ok) {
+      alert('Error: ' + data.error);
+      document.getElementById('compare-btn').disabled = false;
+      return;
+    }
+    document.getElementById('scan-step').style.display = 'none';
+    showResult(data);
+  } catch (err) {
+    document.getElementById('scan-loading').style.display = 'none';
+    document.getElementById('compare-btn').disabled = false;
+    alert('Error: ' + err.message);
+  }
+}
+
+function showResult(data) {
+  const { verdict, combined_score, flag_reason, breakdown, scan_b64 } = data;
+
+  const cfg = {
+    pass:   { bg: '#0f2d1f', border: '#166534', color: '#4ade80', icon: '✓', label: 'PASS',   msg: 'Bag confirmed — consistent with check-in photo' },
+    review: { bg: '#1c1500', border: '#d97706', color: '#fbbf24', icon: '⚠', label: 'REVIEW', msg: 'Marginal match — manual visual check required'    },
+    flag:   { bg: '#450a0a', border: '#ef4444', color: '#fca5a5', icon: '✕', label: 'FLAG',   msg: 'Bag may have been switched — lock it down'        },
+  }[verdict];
+
+  // Update live status badge and alert banner when auto-flagging
+  if (verdict === 'flag' && !ALREADY_FLAGGED) {
+    const badge = document.getElementById('status-badge');
+    if (badge) { badge.textContent = '⚠ FLAGGED'; badge.className = 'status-badge status-flag'; }
+    document.getElementById('flag-alert').style.display = 'block';
+  }
+
+  const pct = n => (n * 100).toFixed(1) + '%';
+
+  const reasonHtml = flag_reason
+    ? `<p style="font-size:0.76rem;opacity:0.75;margin-top:0.5rem">Reason: ${flag_reason}</p>` : '';
+
+  const reviewBtns = verdict === 'review' ? `
+    <div class="actions">
+      <button class="btn-confirm" onclick="doAction('confirm')">✓ Confirm bag</button>
+      <button class="btn-flag"    onclick="doAction('flag')">⚠ Flag bag</button>
+    </div>` : '';
+
+  const scanImg = scan_b64
+    ? `<img class="bag-img" src="data:image/jpeg;base64,${scan_b64}" alt="Scan photo" style="margin-bottom:0.9rem">` : '';
+
+  document.getElementById('result-step').innerHTML = `
+    <div style="background:${cfg.bg};border:1px solid ${cfg.border};color:${cfg.color};
+                border-radius:12px;padding:1.25rem;margin-bottom:0.9rem;text-align:center">
+      <div style="font-size:2rem;margin-bottom:0.25rem">${cfg.icon}</div>
+      <div style="font-size:1rem;font-weight:700;text-transform:uppercase;letter-spacing:0.1em;margin-bottom:0.35rem">
+        ${cfg.label}
+      </div>
+      <div style="font-size:0.82rem;opacity:0.85;margin-bottom:0.9rem">${cfg.msg}</div>
+      ${reasonHtml}
+      <div class="score-grid">
+        <div class="score-row">
+          <span>Combined score</span><span class="score-val">${pct(combined_score)}</span>
+        </div>
+        <div class="score-row">
+          <span>ORB features (×0.6)</span><span class="score-val">${pct(breakdown.orb_score)}</span>
+        </div>
+        <div class="score-row">
+          <span>Colour (×0.4)</span><span class="score-val">${pct(breakdown.color_score)}</span>
+        </div>
+      </div>
+    </div>
+    ${scanImg}
+    ${reviewBtns}
+    <p style="text-align:center;margin-bottom:0.75rem">
+      <a href="#" onclick="resetScan();return false"
+         style="font-size:0.78rem;color:#64748b;text-decoration:none">↩ Scan again</a>
+    </p>
+  `;
+  document.getElementById('result-step').style.display = 'block';
+}
+
+function resetScan() {
+  const rs = document.getElementById('result-step');
+  rs.style.display = 'none';
+  rs.innerHTML = '';
+  document.getElementById('scan-file').value = '';
+  document.getElementById('scan-preview').style.display = 'none';
+  document.getElementById('compare-btn').disabled = false;
+  document.getElementById('scan-step').style.display = 'block';
+}
+
+async function doAction(type) {
+  const resp = await fetch('/action/' + BARCODE_ID, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ action: type })
+  });
+  const data = await resp.json();
+  if (!data.ok) { alert('Error: ' + (data.error || 'unknown')); return; }
+  if (type === 'collect') {
+    document.querySelector('.container').innerHTML = `
+      <div class="done-screen">
+        <div class="icon">✅</div>
+        <h2>Bag checked out</h2>
+        <p>Record deleted. Bag collected at carousel.</p>
+        <a href="/bags" style="display:inline-block;margin-top:1rem;color:#64748b;font-size:0.85rem;text-decoration:none">← Back to all bags</a>
+      </div>`;
+  } else {
+    location.reload();
+  }
+}
+</script>
+</body>
+</html>

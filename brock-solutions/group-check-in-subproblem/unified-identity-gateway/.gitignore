@@ -1,0 +1,12 @@
+node_modules/
+dist/
+.env
+*.log
+.DS_Store
+*.tsbuildinfo
+
+# repo root ignores *.html; the Vite entry point must stay tracked
+!apps/web/index.html
+
+# repo root ignores .env.*; the examples are documentation, not secrets
+!.env.example

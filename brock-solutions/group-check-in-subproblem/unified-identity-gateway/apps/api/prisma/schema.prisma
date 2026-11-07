@@ -1,0 +1,121 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Flight {
+  id             String         @id @default(uuid())
+  flightNumber   String
+  origin         String
+  destination    String
+  departureTime  DateTime
+  aircraftType   String
+  maxBagWeightKg Float
+  bags           Bag[]
+  boardingPasses BoardingPass[]
+  passengers     Passenger[]
+  seats          Seat[]
+}
+
+model Seat {
+  id          String     @id @default(uuid())
+  flightId    String
+  seatNumber  String
+  cabinZone   CabinZone
+  occupied    Boolean    @default(false)
+  passengerId String?    @unique
+  flight      Flight     @relation(fields: [flightId], references: [id])
+  passenger   Passenger? @relation(fields: [passengerId], references: [id])
+
+  @@unique([flightId, seatNumber])
+}
+
+model Passenger {
+  id               String        @id @default(uuid())
+  bookingRef       String        @unique
+  firstName        String
+  lastName         String
+  flightId         String
+  groupId          String?
+  checkInStatus    CheckInStatus @default(NOT_STARTED)
+  declaredBagCount Int           @default(0)
+  riskFlags        String[]      @default([])
+  auditLogs        AuditLog[]
+  bags             Bag[]
+  boardingPass     BoardingPass?
+  document         Document?
+  flight           Flight        @relation(fields: [flightId], references: [id])
+  seat             Seat?
+}
+
+model Document {
+  id              String    @id @default(uuid())
+  passengerId     String    @unique
+  passportNumber  String
+  fullName        String
+  dob             DateTime
+  nationality     String
+  expiryDate      DateTime
+  confidenceScore Int
+  issues          String[]  @default([])
+  status          String
+  faceMatchPassed Boolean   @default(false)
+  faceMatchScore  Float?
+  passenger       Passenger @relation(fields: [passengerId], references: [id])
+}
+
+model Bag {
+  id          String    @id @default(uuid())
+  passengerId String
+  flightId    String
+  tagId       String    @unique
+  weightKg    Float
+  overweight  Boolean   @default(false)
+  flight      Flight    @relation(fields: [flightId], references: [id])
+  passenger   Passenger @relation(fields: [passengerId], references: [id])
+
+  @@index([passengerId])
+}
+
+model BoardingPass {
+  id          String    @id @default(uuid())
+  passengerId String    @unique
+  flightId    String
+  seatNumber  String
+  qrPayload   String
+  issuedAt    DateTime  @default(now())
+  flight      Flight    @relation(fields: [flightId], references: [id])
+  passenger   Passenger @relation(fields: [passengerId], references: [id])
+}
+
+model AuditLog {
+  id          String    @id @default(uuid())
+  passengerId String
+  actorRole   String
+  action      String
+  prevStatus  String
+  newStatus   String
+  reason      String
+  timestamp   DateTime  @default(now())
+  passenger   Passenger @relation(fields: [passengerId], references: [id])
+
+  @@index([passengerId])
+}
+
+enum CheckInStatus {
+  NOT_STARTED
+  IN_PROGRESS
+  CLEARED
+  BLOCKED
+  NEEDS_REVIEW
+}
+
+enum CabinZone {
+  FRONT
+  MID
+  REAR
+}
